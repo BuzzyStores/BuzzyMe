@@ -8,7 +8,19 @@ export type PlatformEventType =
   | "OrderReadyForPickup"
   | "OrderCompleted"
   | "ReviewRequested"
-  | "QRCodeScanned";
+  | "QRCodeScanned"
+  | "CampaignDraftGenerated"
+  | "CampaignVendorApproved"
+  | "CampaignAdminApproved"
+  | "CampaignActivated"
+  | "CampaignPaused"
+  | "CampaignEnded"
+  | "CouponApplied"
+  | "CustomerProfileCreated"
+  | "CustomerProfileUpdated"
+  | "RetentionSuggestionGenerated"
+  | "ReviewSubmitted"
+  | "VendorHealthScoreUpdated";
 
 export type PublishEventInput = {
   type: PlatformEventType;

@@ -1,5 +1,6 @@
 import { Clock, PackageCheck } from "lucide-react";
 import { AppShell, Panel } from "@buzzystores/ui";
+import { OrderReviewForm } from "../../../components/order-review-form";
 import { getOrderTracking } from "../../../lib/orders";
 
 export default async function OrderTrackingPage({ params }: { params: Promise<{ id: string }> }) {
@@ -39,6 +40,11 @@ export default async function OrderTrackingPage({ params }: { params: Promise<{ 
           <p className="mt-4 text-right text-base font-semibold text-ink">
             {order.totalAmount} {order.currency}
           </p>
+          {order.discountAmount ? (
+            <p className="mt-1 text-right text-sm font-medium text-emerald-700">
+              Discount {order.discountAmount} {order.currency}
+            </p>
+          ) : null}
         </Panel>
 
         <Panel>
@@ -51,6 +57,12 @@ export default async function OrderTrackingPage({ params }: { params: Promise<{ 
             </div>
           </div>
         </Panel>
+
+        {order.canReview ? (
+          <Panel>
+            <OrderReviewForm orderId={order.orderId} />
+          </Panel>
+        ) : null}
       </main>
     </AppShell>
   );

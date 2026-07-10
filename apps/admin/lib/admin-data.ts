@@ -28,6 +28,18 @@ export type AdminOrder = {
   latestStatusUpdate: string;
 };
 
+export type AdminCampaign = {
+  id: string;
+  vendorName: string;
+  title: string;
+  type: string;
+  status: string;
+  offerText?: string | null;
+  couponCode?: string | null;
+  updatedAt: string;
+  preview: Record<string, unknown>;
+};
+
 export async function getAdminAiOutputs(): Promise<AdminAiOutput[]> {
   return [
     {
@@ -136,4 +148,116 @@ export async function getAdminOrders(): Promise<AdminOrder[]> {
       latestStatusUpdate: "Review request sent"
     }
   ];
+}
+
+const fallbackCampaigns: AdminCampaign[] = [
+  {
+    id: "campaign-weekend-jollof",
+    vendorName: "Akwasaba Kitchen",
+    title: "Weekend Family Jollof Bundle",
+    type: "FAMILY_BUNDLE",
+    status: "ACTIVE",
+    offerText: "15% off selected pickup favourites",
+    couponCode: "JOLLOF15",
+    updatedAt: "2026-07-10T08:00:00.000Z",
+    preview: {
+      whatsappCopy: "Weekend family tray ready for pickup.",
+      selectedListings: ["Jollof Rice Lunch Bowl"]
+    }
+  },
+  {
+    id: "campaign-ai-draft",
+    vendorName: "Akwasaba Kitchen",
+    title: "Student Lunch QR Offer",
+    type: "STUDENT_DEAL",
+    status: "VENDOR_APPROVED",
+    offerText: "10% off weekday lunch bowls",
+    couponCode: "STUDENT10",
+    updatedAt: "2026-07-10T09:00:00.000Z",
+    preview: {
+      instagramCaption: "Student lunch offer is ready.",
+      qrPosterHeadline: "Lunch offer"
+    }
+  }
+];
+
+export async function getAdminCampaigns(): Promise<AdminCampaign[]> {
+  const campaigns = await fetchAdminData<unknown[]>("/admin/campaigns", fallbackCampaigns);
+  return campaigns.map(toAdminCampaign);
+}
+
+export async function getAdminCampaign(id: string): Promise<AdminCampaign> {
+  const campaign = await fetchAdminData<unknown>(`/admin/campaigns/${id}`, fallbackCampaigns.find((item) => item.id === id) ?? fallbackCampaigns[0]);
+  return toAdminCampaign(campaign);
+}
+
+export async function updateAdminCampaign(campaignId: string, action: "approve" | "reject" | "activate" | "pause") {
+  const baseUrl = process.env.NEXT_PUBLIC_API_URL ?? process.env.NEXT_PUBLIC_API_BASE_URL;
+
+  if (!baseUrl) {
+    return {
+      campaignId,
+      action,
+      updatedAt: new Date().toISOString()
+    };
+  }
+
+  const response = await fetch(`${baseUrl}/api/admin/campaigns/${campaignId}/${action}`, {
+    method: "POST"
+  });
+
+  if (!response.ok) {
+    throw new Error("Unable to update campaign.");
+  }
+
+  return response.json();
+}
+
+async function fetchAdminData<T>(path: string, fallback: T): Promise<T> {
+  const baseUrl = process.env.API_BASE_URL ?? process.env.NEXT_PUBLIC_API_URL;
+
+  if (!baseUrl) {
+    return fallback;
+  }
+
+  try {
+    const response = await fetch(`${baseUrl}/api${path}`, { cache: "no-store" });
+
+    if (response.ok) {
+      return (await response.json()) as T;
+    }
+  } catch {
+    // Keep admin UI usable during local mock preview.
+  }
+
+  return fallback;
+}
+
+function toAdminCampaign(value: unknown): AdminCampaign {
+  const record = isRecord(value) ? value : {};
+  const vendor = isRecord(record.vendor) ? record.vendor : {};
+  const title = String(record.title ?? record.name ?? "Campaign");
+
+  return {
+    id: String(record.id ?? title),
+    vendorName: String(record.vendorName ?? vendor.name ?? "Vendor"),
+    title,
+    type: String(record.type ?? "WEEKEND_OFFER"),
+    status: String(record.status ?? "DRAFT"),
+    offerText: typeof record.offerText === "string" ? record.offerText : null,
+    couponCode: typeof record.couponCode === "string" ? record.couponCode : null,
+    updatedAt: String(record.updatedAt ?? new Date().toISOString()),
+    preview: isRecord(record.preview)
+      ? record.preview
+      : {
+          description: record.description ?? null,
+          whatsappCopy: record.whatsappCopy ?? null,
+          instagramCaption: record.instagramCaption ?? null,
+          selectedListingIds: record.selectedListingIds ?? record.listingIds ?? []
+        }
+  };
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null;
 }

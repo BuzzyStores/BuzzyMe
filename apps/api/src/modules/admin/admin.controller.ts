@@ -5,6 +5,7 @@ import { CurrentActor, type CurrentActor as CurrentActorValue } from "../../comm
 import { Roles } from "../../common/guards/roles.decorator";
 import { AdminService } from "./admin.service";
 import { RejectAiOutputDto } from "./dto/reject-ai-output.dto";
+import { RejectCampaignDto } from "./dto/reject-campaign.dto";
 import { RejectListingDto } from "./dto/reject-listing.dto";
 
 @ApiTags("admin")
@@ -69,5 +70,39 @@ export class AdminController {
   @Get("orders")
   listOrders() {
     return this.adminService.listOrders();
+  }
+
+  @Get("campaigns")
+  listCampaigns(@Query("status") status?: string) {
+    return this.adminService.listCampaigns(status);
+  }
+
+  @Get("campaigns/:id")
+  getCampaign(@Param("id") id: string) {
+    return this.adminService.getCampaign(id);
+  }
+
+  @Post("campaigns/:id/approve")
+  approveCampaign(@Param("id") id: string, @CurrentActor() actor: CurrentActorValue) {
+    return this.adminService.approveCampaign(id, actor);
+  }
+
+  @Post("campaigns/:id/reject")
+  rejectCampaign(
+    @Param("id") id: string,
+    @Body() dto: RejectCampaignDto,
+    @CurrentActor() actor: CurrentActorValue,
+  ) {
+    return this.adminService.rejectCampaign(id, actor, dto.reason);
+  }
+
+  @Post("campaigns/:id/activate")
+  activateCampaign(@Param("id") id: string, @CurrentActor() actor: CurrentActorValue) {
+    return this.adminService.activateCampaign(id, actor);
+  }
+
+  @Post("campaigns/:id/pause")
+  pauseCampaign(@Param("id") id: string, @CurrentActor() actor: CurrentActorValue) {
+    return this.adminService.pauseCampaign(id, actor);
   }
 }

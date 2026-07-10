@@ -100,3 +100,36 @@ sequenceDiagram
 ```
 
 The first checkout is deliberately single-vendor pickup only. Payment status is stored as mock metadata, not processed by a provider.
+
+## Phase 4 Growth Flow
+
+```mermaid
+sequenceDiagram
+  participant Vendor
+  participant API
+  participant AI as Mock AI
+  participant Admin
+  participant Customer
+  participant DB
+
+  Vendor->>API: POST /api/vendor/campaigns/generate
+  API->>AI: deterministic campaign draft
+  API->>DB: AIJob, AIOutput, Campaign(AI_GENERATED)
+  Vendor->>API: POST /api/vendor/campaigns/:id/approve
+  API->>DB: Campaign(VENDOR_APPROVED), audit, event
+  Admin->>API: approve and activate campaign
+  API->>DB: Campaign(ACTIVE), Coupon, CampaignActivated
+  Customer->>API: POST /api/orders with couponCode
+  API->>DB: validate coupon, discount order, CouponApplied
+  API->>DB: create/update VendorCustomerProfile
+  Vendor->>API: complete order
+  API->>DB: increment CRM order count and spend
+  Customer->>API: POST /api/orders/:id/review
+  API->>DB: ReviewSubmitted, rating summary
+  Vendor->>API: GET /api/vendor/customers/retention-suggestions
+  Vendor->>API: GET /api/vendor/health
+```
+
+Phase 4 keeps campaign publishing human-gated. The public web app receives active campaigns only, and unpublished storefronts still return the safe placeholder. Coupon validation is intentionally simple: vendor ownership, active flag, date window, usage limit, campaign active state, and minimum order amount.
+
+Vendor health is a lightweight operational score, not a financial ledger. It combines published storefront status, approved listings, QR scan count, received/completed orders, cancellation/rejection rate, active campaigns, reviews, repeat customers, and days since last order. The next production pass should harden authentication and replace mock fallbacks with fully authenticated API sessions.

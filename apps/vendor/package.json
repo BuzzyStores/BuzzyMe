@@ -9,6 +9,7 @@
     "test": "node --test"
   },
   "dependencies": {
+    "@buzzystores/types": "workspace:*",
     "@buzzystores/ui": "workspace:*",
     "@tanstack/react-query": "^5.64.2",
     "lucide-react": "^0.468.0",
@@ -19,6 +20,8 @@
     "zod": "^3.24.1"
   },
   "devDependencies": {
+    "@types/react": "^19.0.2",
+    "@types/react-dom": "^19.0.2",
     "autoprefixer": "^10.4.20",
     "postcss": "^8.4.49",
     "tailwindcss": "^3.4.17",

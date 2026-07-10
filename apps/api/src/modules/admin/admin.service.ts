@@ -4,6 +4,7 @@ import { prisma } from "@buzzystores/database";
 import { ApprovalStatus, LifecycleTrigger, UserRole, VendorLifecycleStage } from "@buzzystores/types";
 import { deterministicShortCode } from "@buzzystores/utils";
 import { AiService } from "../ai/ai.service";
+import { CampaignsService } from "../campaigns/campaigns.service";
 import { EventPublisherService } from "../events/event-publisher.service";
 import { VendorLifecycleService } from "../vendor-lifecycle/vendor-lifecycle.service";
 
@@ -11,6 +12,7 @@ import { VendorLifecycleService } from "../vendor-lifecycle/vendor-lifecycle.ser
 export class AdminService {
   constructor(
     private readonly aiService: AiService,
+    private readonly campaignsService: CampaignsService,
     private readonly eventPublisher: EventPublisherService,
     private readonly lifecycleService: VendorLifecycleService,
   ) {}
@@ -392,6 +394,34 @@ export class AdminService {
     });
 
     return updated;
+  }
+
+  listCampaigns(status?: string) {
+    return this.campaignsService.listAdminCampaigns(status);
+  }
+
+  getCampaign(id: string) {
+    return this.campaignsService.getAdminCampaign(id);
+  }
+
+  approveCampaign(id: string, actor: { id: string; role: UserRole }) {
+    this.assertAdmin(actor);
+    return this.campaignsService.approveAdminCampaign(id, actor);
+  }
+
+  rejectCampaign(id: string, actor: { id: string; role: UserRole }, reason?: string) {
+    this.assertAdmin(actor);
+    return this.campaignsService.rejectAdminCampaign(id, actor, reason);
+  }
+
+  activateCampaign(id: string, actor: { id: string; role: UserRole }) {
+    this.assertAdmin(actor);
+    return this.campaignsService.activateCampaign(id, actor);
+  }
+
+  pauseCampaign(id: string, actor: { id: string; role: UserRole }) {
+    this.assertAdmin(actor);
+    return this.campaignsService.pauseAdminCampaign(id, actor);
   }
 
   listOrders() {

@@ -62,4 +62,8 @@ export class CreateOrderDto {
   @IsOptional()
   @IsString()
   requestedPickupTime?: string;
+
+  @IsOptional()
+  @IsString()
+  couponCode?: string;
 }

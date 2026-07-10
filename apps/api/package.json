@@ -12,6 +12,7 @@
   "dependencies": {
     "@buzzystores/ai": "workspace:*",
     "@buzzystores/auth": "workspace:*",
+    "@buzzystores/config": "workspace:*",
     "@buzzystores/database": "workspace:*",
     "@buzzystores/notifications": "workspace:*",
     "@buzzystores/payments": "workspace:*",

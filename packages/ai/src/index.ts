@@ -1,4 +1,4 @@
-import { ApprovalStatus, ListingType } from "@buzzystores/types";
+import { ApprovalStatus, DiscountType, ListingType } from "@buzzystores/types";
 
 export type AiAgentType =
   | "vendor-intake"
@@ -53,6 +53,16 @@ export class MockAiProvider implements AiProvider {
       };
     }
 
+    if (request.agentType === "campaign") {
+      return {
+        provider: this.name,
+        model: "mock-campaign-draft-v1",
+        confidence: 0.74,
+        requiresHumanApproval: true,
+        output: createCampaignDraft(request.sourceInput)
+      };
+    }
+
     return {
       provider: this.name,
       model: "mock-local-draft",
@@ -66,6 +76,44 @@ export class MockAiProvider implements AiProvider {
       }
     };
   }
+}
+
+function createCampaignDraft(input: Record<string, unknown>): Record<string, unknown> {
+  const vendor = isRecord(input.vendor) ? input.vendor : {};
+  const vendorName = String(vendor.name ?? input.vendorName ?? "Local vendor");
+  const campaignType = String(input.campaignType ?? "WEEKEND_OFFER")
+    .toLowerCase()
+    .replace(/_/g, " ");
+  const listings = Array.isArray(input.approvedListings)
+    ? input.approvedListings.filter(isRecord)
+    : [];
+  const selectedListings = listings.slice(0, 3).map((listing) => String(listing.id ?? listing.title));
+  const language = String(input.language ?? input.targetLanguage ?? "en");
+  const today = new Date("2026-07-10T09:00:00.000Z");
+  const endDate = new Date(today);
+  endDate.setDate(today.getDate() + 7);
+  const discountValue = campaignType.includes("loyalty") ? 10 : 15;
+
+  return {
+    title: `${vendorName} ${titleCase(campaignType)}`,
+    description:
+      language === "sv"
+        ? `${vendorName} kan lansera ett lokalt erbjudande för kunder som handlar via QR-butiken.`
+        : `${vendorName} can launch a local offer for customers ordering through the QR storefront.`,
+    offerText: `${discountValue}% off selected pickup favourites`,
+    suggestedListings: selectedListings,
+    suggestedDiscount: {
+      type: DiscountType.PERCENTAGE,
+      value: discountValue
+    },
+    whatsappCopy: `${vendorName}: ${discountValue}% off this week. Order from the QR storefront.`,
+    instagramCaption: `${vendorName} local offer is live. Tap the QR storefront and order for pickup.`,
+    smsCopy: `${vendorName}: use the QR storefront for ${discountValue}% off selected items.`,
+    qrPosterHeadline: `${vendorName} offer`,
+    qrPosterSubtext: `Scan to order and use the campaign code at pickup checkout.`,
+    recommendedStartDate: today.toISOString(),
+    recommendedEndDate: endDate.toISOString()
+  };
 }
 
 function createVendorIntakeDraft(input: Record<string, unknown>): Record<string, unknown> {
@@ -136,4 +184,12 @@ function parseProductText(productText: string): Array<{ title: string; price: nu
         currency: String(match[3] ?? "SEK").toLowerCase() === "kr" ? "SEK" : String(match[3] ?? "SEK").toUpperCase()
       };
     });
+}
+
+function titleCase(value: string): string {
+  return value.replace(/\b\w/g, (letter) => letter.toUpperCase());
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null;
 }

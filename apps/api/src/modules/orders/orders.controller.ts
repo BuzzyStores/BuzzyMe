@@ -1,6 +1,7 @@
 import { Body, Controller, Get, Param, Post } from "@nestjs/common";
 import { ApiTags } from "@nestjs/swagger";
 import { CreateOrderDto } from "./dto/create-order.dto";
+import { SubmitReviewDto } from "./dto/submit-review.dto";
 import { OrdersService } from "./orders.service";
 
 @ApiTags("orders")
@@ -16,5 +17,10 @@ export class OrdersController {
   @Post()
   createOrder(@Body() dto: CreateOrderDto) {
     return this.ordersService.createOrder(dto);
+  }
+
+  @Post(":id/review")
+  submitReview(@Param("id") id: string, @Body() dto: SubmitReviewDto) {
+    return this.ordersService.submitReview(id, dto);
   }
 }

@@ -9,6 +9,7 @@ export function PickupOrderPanel({ vendorId, listings }: { vendorId: string; lis
   const [quantities, setQuantities] = useState<Record<string, number>>({});
   const [customerName, setCustomerName] = useState("");
   const [phone, setPhone] = useState("");
+  const [couponCode, setCouponCode] = useState("");
   const [note, setNote] = useState("");
   const [status, setStatus] = useState<string | null>(null);
 
@@ -41,6 +42,7 @@ export function PickupOrderPanel({ vendorId, listings }: { vendorId: string; lis
         listingId: item.id,
         quantity: item.quantity
       })),
+      ...(couponCode ? { couponCode } : {}),
       ...(note ? { customerNote: note } : {})
     });
 
@@ -117,6 +119,12 @@ export function PickupOrderPanel({ vendorId, listings }: { vendorId: string; lis
           onChange={(event) => setNote(event.target.value)}
           placeholder="Pickup note"
           value={note}
+        />
+        <input
+          className="min-h-11 rounded-md border border-slate-300 px-3 text-sm uppercase"
+          onChange={(event) => setCouponCode(event.target.value)}
+          placeholder="Coupon code"
+          value={couponCode}
         />
       </div>
 

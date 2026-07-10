@@ -47,6 +47,23 @@ export enum ApprovalStatus {
   PUBLISHED = "PUBLISHED"
 }
 
+export enum CampaignStatus {
+  DRAFT = "DRAFT",
+  AI_GENERATED = "AI_GENERATED",
+  VENDOR_APPROVED = "VENDOR_APPROVED",
+  ADMIN_APPROVED = "ADMIN_APPROVED",
+  SCHEDULED = "SCHEDULED",
+  ACTIVE = "ACTIVE",
+  PAUSED = "PAUSED",
+  ENDED = "ENDED",
+  REJECTED = "REJECTED"
+}
+
+export enum DiscountType {
+  PERCENTAGE = "PERCENTAGE",
+  FIXED_AMOUNT = "FIXED_AMOUNT"
+}
+
 export enum OrderType {
   PICKUP = "PICKUP",
   DELIVERY = "DELIVERY",
@@ -91,6 +108,53 @@ export enum CampaignType {
   CLEARANCE = "CLEARANCE",
   LOYALTY = "LOYALTY"
 }
+
+export type AiCampaignDraft = {
+  title: string;
+  description: string;
+  offerText: string;
+  suggestedListings: string[];
+  suggestedDiscount: {
+    type: DiscountType;
+    value: number;
+  };
+  whatsappCopy: string;
+  instagramCaption: string;
+  smsCopy: string;
+  qrPosterHeadline: string;
+  qrPosterSubtext: string;
+  recommendedStartDate: string;
+  recommendedEndDate: string;
+};
+
+export type CampaignSummary = {
+  id: string;
+  vendorId: string;
+  title: string;
+  campaignType: CampaignType;
+  status: CampaignStatus;
+  offerText?: string | null;
+  couponCode?: string | null;
+  campaignUrl?: string | null;
+};
+
+export type VendorCustomerSegment = "repeat" | "inactive" | "highValue" | "firstTime";
+
+export type RetentionSuggestion = {
+  segment: VendorCustomerSegment;
+  customerIds: string[];
+  suggestedActions: string[];
+  messageDrafts: string[];
+};
+
+export type VendorHealthStatus = "GOOD" | "NEEDS_ATTENTION" | "AT_RISK";
+
+export type VendorHealthSummary = {
+  score: number;
+  status: VendorHealthStatus;
+  reasons: string[];
+  recommendedActions: string[];
+};
 
 export enum NotificationChannel {
   EMAIL = "EMAIL",

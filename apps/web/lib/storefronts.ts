@@ -8,6 +8,23 @@ export type PublicListing = {
   deliveryEnabled: boolean;
 };
 
+export type PublicCampaignSummary = {
+  id: string;
+  title: string;
+  offerText?: string | null;
+  description?: string | null;
+  couponCode?: string | null;
+  campaignUrl?: string | null;
+  selectedListingIds?: string[];
+};
+
+export type PublicReview = {
+  id: string;
+  rating: number;
+  comment?: string | null;
+  createdAt: string;
+};
+
 export type PublicStorefront = {
   vendorId: string;
   vendorName: string;
@@ -23,6 +40,10 @@ export type PublicStorefront = {
   openingHours?: unknown;
   pickupEnabled?: boolean;
   deliveryEnabled?: boolean;
+  averageRating?: number;
+  reviewCount?: number;
+  activeCampaigns?: PublicCampaignSummary[];
+  reviews?: PublicReview[];
   message?: string;
   listings: PublicListing[];
 };
@@ -42,6 +63,27 @@ const fallbackStorefronts: PublicStorefront[] = [
     country: "Sweden",
     pickupEnabled: true,
     deliveryEnabled: true,
+    averageRating: 4.8,
+    reviewCount: 12,
+    activeCampaigns: [
+      {
+        id: "campaign-weekend-jollof",
+        title: "Weekend Family Jollof Bundle",
+        offerText: "15% off selected pickup favourites",
+        description: "A weekend QR storefront offer for family trays and lunch bowls.",
+        couponCode: "JOLLOF15",
+        campaignUrl: "/campaigns/camp-akwasa",
+        selectedListingIds: ["listing-jollof"]
+      }
+    ],
+    reviews: [
+      {
+        id: "review-bz-1999",
+        rating: 5,
+        comment: "Pickup was quick and the jollof was excellent.",
+        createdAt: "2026-07-09T18:00:00.000Z"
+      }
+    ],
     listings: [
       {
         id: "listing-jollof",
@@ -88,7 +130,7 @@ export async function getStorefrontByShortCode(shortCode: string) {
 }
 
 export async function recordQrScan(shortCode: string) {
-  const baseUrl = process.env.API_BASE_URL;
+  const baseUrl = process.env.API_BASE_URL ?? process.env.NEXT_PUBLIC_API_URL;
 
   if (!baseUrl) {
     return { recorded: false, mocked: true };
@@ -111,7 +153,7 @@ export async function recordQrScan(shortCode: string) {
 }
 
 async function fetchStorefront(path: string, fallback: () => PublicStorefront | null) {
-  const baseUrl = process.env.API_BASE_URL;
+  const baseUrl = process.env.API_BASE_URL ?? process.env.NEXT_PUBLIC_API_URL;
 
   if (!baseUrl) {
     return fallback();
