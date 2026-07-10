@@ -1,0 +1,506 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserRole {
+  CONSUMER
+  VENDOR_OWNER
+  VENDOR_STAFF
+  DRIVER
+  AMBASSADOR
+  ADMIN
+  SUPER_ADMIN
+  PARTNER_VIEWER
+  AI_AGENT
+}
+
+enum VendorLifecycleStage {
+  LEAD_IDENTIFIED
+  CONTACTED
+  INTERESTED
+  INFO_COLLECTED
+  STORE_DRAFTED
+  PENDING_APPROVAL
+  PUBLISHED
+  QR_DELIVERED
+  FIRST_CAMPAIGN_LAUNCHED
+  FIRST_ORDER_RECEIVED
+  ACTIVE
+  AT_RISK
+  DORMANT
+  CHURNED
+  REACTIVATION
+}
+
+enum ApprovalStatus {
+  DRAFT
+  AI_GENERATED
+  VENDOR_APPROVED
+  ADMIN_APPROVED
+  REJECTED
+  PUBLISHED
+}
+
+enum ListingType {
+  PHYSICAL_PRODUCT
+  FOOD_MENU_ITEM
+  SERVICE
+  BOOKABLE_APPOINTMENT
+  RENTAL_ITEM
+  CIRCULAR_ITEM
+  DIASPORA_ORDER_ITEM
+}
+
+enum OrderType {
+  PICKUP
+  DELIVERY
+  DINE_IN
+  TAKEAWAY
+  BOOKING
+  RENTAL
+  SERVICE_REQUEST
+  QUOTE_REQUEST
+  DIASPORA_ORDER
+}
+
+enum OrderStatus {
+  CREATED
+  PAYMENT_PENDING
+  PAID
+  SENT_TO_VENDOR
+  ACCEPTED
+  REJECTED
+  PREPARING
+  READY_FOR_PICKUP
+  DRIVER_ASSIGNED
+  OUT_FOR_DELIVERY
+  DELIVERED
+  COMPLETED
+  CANCELLED
+  REFUND_REQUESTED
+  REFUNDED
+  DISPUTED
+}
+
+enum CampaignType {
+  LUNCH_DEAL
+  WEEKEND_OFFER
+  STUDENT_DEAL
+  FAMILY_BUNDLE
+  BEAUTY_BOOKING
+  REPAIR_CAMPAIGN
+  CIRCULAR_COMMERCE
+  DIASPORA_SEND_HOME
+  LOCAL_EVENT
+  CLEARANCE
+  LOYALTY
+}
+
+enum AIJobStatus {
+  QUEUED
+  RUNNING
+  COMPLETED
+  FAILED
+  NEEDS_REVIEW
+}
+
+enum AIOutputType {
+  VENDOR_PROFILE
+  LISTING_DRAFT
+  STOREFRONT_COPY
+  CAMPAIGN_COPY
+  TRANSLATION
+  SUPPORT_RESPONSE
+  HEALTH_SCORE
+}
+
+enum NotificationChannel {
+  EMAIL
+  SMS
+  WHATSAPP
+  IN_APP
+  PUSH
+}
+
+enum NotificationStatus {
+  QUEUED
+  SENT
+  FAILED
+  READ
+}
+
+enum LifecycleTrigger {
+  USER
+  ADMIN
+  AI_AGENT
+  SYSTEM
+}
+
+model User {
+  id                 String                 @id @default(cuid())
+  email              String?                @unique
+  phone              String?                @unique
+  fullName           String
+  role               UserRole               @default(CONSUMER)
+  passwordHash       String?
+  marketingOptIn     Boolean                @default(false)
+  dataDeletionStatus String?
+  createdAt          DateTime               @default(now())
+  updatedAt          DateTime               @updatedAt
+  ownedVendors       Vendor[]               @relation("VendorOwner")
+  assignedVendors    Vendor[]               @relation("AssignedVendorOwner")
+  lifecycleEvents    VendorLifecycleEvent[] @relation("LifecycleActor")
+  customerOrders     Order[]                @relation("CustomerOrders")
+  requestedAIJobs    AIJob[]                @relation("AIJobRequester")
+  approvedAIOutputs  AIOutput[]             @relation("AIOutputApprover")
+  notifications      Notification[]
+  auditLogs          AuditLog[]
+
+  @@index([role])
+}
+
+model Vendor {
+  id                 String                 @id @default(cuid())
+  name               String
+  slug               String                 @unique
+  description        String?
+  categoryLabel      String?
+  phone              String?
+  email              String?
+  address            String?
+  city               String?
+  country            String?
+  websiteUrl         String?
+  socialUrl          String?
+  instagramUrl       String?
+  facebookUrl        String?
+  preferredLanguage  String?                @default("en")
+  approvalStatus     ApprovalStatus         @default(DRAFT)
+  source             String?
+  lifecycleStage     VendorLifecycleStage   @default(LEAD_IDENTIFIED)
+  nextAction         String?
+  activationScore    Int                    @default(0)
+  healthScore        Int                    @default(0)
+  lastContactAt      DateTime?
+  ownerId            String?
+  assignedOwnerId    String?
+  createdAt          DateTime               @default(now())
+  updatedAt          DateTime               @updatedAt
+  owner              User?                  @relation("VendorOwner", fields: [ownerId], references: [id])
+  assignedOwner      User?                  @relation("AssignedVendorOwner", fields: [assignedOwnerId], references: [id])
+  storefront         Storefront?
+  lifecycleEvents    VendorLifecycleEvent[]
+  listings           Listing[]
+  orders             Order[]
+  campaigns          Campaign[]
+  aiJobs             AIJob[]
+  aiOutputs          AIOutput[]
+  qrCodes            QRCode[]
+  notifications      Notification[]
+  auditLogs          AuditLog[]
+  platformEvents     PlatformEvent[]
+
+  @@index([lifecycleStage])
+  @@index([assignedOwnerId])
+}
+
+model VendorLifecycleEvent {
+  id             String                @id @default(cuid())
+  vendorId       String
+  fromStage      VendorLifecycleStage?
+  toStage        VendorLifecycleStage
+  note           String?
+  nextAction     String?
+  source         String?
+  trigger        LifecycleTrigger      @default(SYSTEM)
+  metadata       Json?
+  activationDelta Int                  @default(0)
+  healthDelta    Int                   @default(0)
+  createdById    String?
+  occurredAt     DateTime              @default(now())
+  vendor         Vendor                @relation(fields: [vendorId], references: [id], onDelete: Cascade)
+  createdBy      User?                 @relation("LifecycleActor", fields: [createdById], references: [id])
+
+  @@index([vendorId, occurredAt])
+}
+
+model Storefront {
+  id               String    @id @default(cuid())
+  vendorId         String    @unique
+  slug             String    @unique
+  shortCode        String    @unique
+  headline         String
+  shortDescription String?
+  longDescription  String?
+  seoTitle         String?
+  seoDescription   String?
+  openingHours     Json?
+  pickupText       String?
+  deliveryText     String?
+  publishedAt      DateTime?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+  vendor           Vendor    @relation(fields: [vendorId], references: [id], onDelete: Cascade)
+  qrCodes          QRCode[]
+}
+
+model Category {
+  id          String     @id @default(cuid())
+  name        String
+  slug        String     @unique
+  description String?
+  parentId    String?
+  parent      Category?  @relation("CategoryTree", fields: [parentId], references: [id])
+  children    Category[] @relation("CategoryTree")
+  listings    Listing[]
+  campaigns   Campaign[]
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+}
+
+model Listing {
+  id                  String         @id @default(cuid())
+  vendorId            String
+  categoryId          String?
+  title               String
+  slug                String
+  shortDescription    String?
+  longDescription     String?
+  listingType         ListingType
+  tags                String[]       @default([])
+  price               Decimal        @db.Decimal(12, 2)
+  currency            String         @default("SEK")
+  imageUrls           String[]       @default([])
+  variants            Json?
+  stockQuantity       Int?
+  availability        Json?
+  locationEligibility Json?
+  pickupEnabled       Boolean        @default(true)
+  deliveryEnabled     Boolean        @default(false)
+  bookingEnabled      Boolean        @default(false)
+  rentalEnabled       Boolean        @default(false)
+  circularStatus      String?
+  diasporaEligible    Boolean        @default(false)
+  preparationMinutes  Int?
+  serviceDurationMin  Int?
+  aiMetadata          Json?
+  approvalStatus      ApprovalStatus @default(DRAFT)
+  publishedAt         DateTime?
+  createdAt           DateTime       @default(now())
+  updatedAt           DateTime       @updatedAt
+  vendor              Vendor         @relation(fields: [vendorId], references: [id], onDelete: Cascade)
+  category            Category?      @relation(fields: [categoryId], references: [id])
+  orderItems          OrderItem[]
+
+  @@unique([vendorId, slug])
+  @@index([listingType])
+  @@index([approvalStatus])
+}
+
+model Order {
+  id              String      @id @default(cuid())
+  orderNumber     String      @unique
+  vendorId        String
+  customerId      String?
+  type            OrderType   @default(PICKUP)
+  status          OrderStatus @default(CREATED)
+  currency        String      @default("SEK")
+  subtotal        Decimal     @db.Decimal(12, 2)
+  deliveryFee     Decimal     @default(0) @db.Decimal(12, 2)
+  discountTotal   Decimal     @default(0) @db.Decimal(12, 2)
+  total           Decimal     @db.Decimal(12, 2)
+  pickupAt        DateTime?
+  deliveryAddress Json?
+  customerNotes   String?
+  vendorNotes     String?
+  metadata        Json?
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+  vendor          Vendor      @relation(fields: [vendorId], references: [id])
+  customer        User?       @relation("CustomerOrders", fields: [customerId], references: [id])
+  items           OrderItem[]
+  platformEvents  PlatformEvent[]
+
+  @@index([vendorId, status])
+  @@index([customerId])
+}
+
+model OrderItem {
+  id            String  @id @default(cuid())
+  orderId       String
+  listingId     String?
+  titleSnapshot String
+  quantity      Int     @default(1)
+  unitPrice     Decimal @db.Decimal(12, 2)
+  totalPrice    Decimal @db.Decimal(12, 2)
+  order         Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  listing       Listing? @relation(fields: [listingId], references: [id])
+}
+
+model Campaign {
+  id             String         @id @default(cuid())
+  vendorId       String
+  categoryId     String?
+  name           String
+  slug           String
+  type           CampaignType
+  status         ApprovalStatus @default(DRAFT)
+  targetAudience String?
+  listingIds     String[]       @default([])
+  couponCode     String?
+  discount       Json?
+  startsAt       DateTime?
+  endsAt         DateTime?
+  qrCodeUrl      String?
+  socialCaption  String?
+  whatsappCopy   String?
+  smsCopy        String?
+  emailCopy      String?
+  performance    Json?
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+  vendor         Vendor         @relation(fields: [vendorId], references: [id], onDelete: Cascade)
+  category       Category?      @relation(fields: [categoryId], references: [id])
+  qrCodes        QRCode[]
+
+  @@unique([vendorId, slug])
+  @@index([type])
+  @@index([status])
+}
+
+model AIJob {
+  id            String      @id @default(cuid())
+  vendorId      String?
+  requestedById String?
+  agentType     String
+  status        AIJobStatus @default(QUEUED)
+  sourceInput   Json
+  provider      String?
+  model         String?
+  promptVersion String
+  errorMessage  String?
+  createdAt     DateTime    @default(now())
+  completedAt   DateTime?
+  vendor        Vendor?     @relation(fields: [vendorId], references: [id], onDelete: SetNull)
+  requestedBy   User?       @relation("AIJobRequester", fields: [requestedById], references: [id])
+  outputs       AIOutput[]
+
+  @@index([agentType, status])
+}
+
+model AIOutput {
+  id             String         @id @default(cuid())
+  aiJobId        String
+  vendorId       String?
+  type           AIOutputType
+  output         Json
+  confidence     Float?
+  approvalStatus ApprovalStatus @default(AI_GENERATED)
+  approvedById   String?
+  approvedAt     DateTime?
+  reviewedById   String?
+  reviewedAt     DateTime?
+  reviewNote     String?
+  version        Int            @default(1)
+  createdAt      DateTime       @default(now())
+  aiJob          AIJob          @relation(fields: [aiJobId], references: [id], onDelete: Cascade)
+  vendor         Vendor?        @relation(fields: [vendorId], references: [id], onDelete: Cascade)
+  approvedBy     User?          @relation("AIOutputApprover", fields: [approvedById], references: [id])
+
+  @@index([vendorId])
+  @@index([approvalStatus])
+}
+
+model QRCode {
+  id           String     @id @default(cuid())
+  vendorId     String
+  storefrontId String?
+  campaignId   String?
+  shortCode    String     @unique
+  targetUrl    String
+  imageUrl     String?
+  posterUrl    String?
+  scanCount    Int        @default(0)
+  deliveredAt  DateTime?
+  createdAt    DateTime   @default(now())
+  vendor       Vendor     @relation(fields: [vendorId], references: [id], onDelete: Cascade)
+  storefront   Storefront? @relation(fields: [storefrontId], references: [id], onDelete: SetNull)
+  campaign     Campaign?  @relation(fields: [campaignId], references: [id], onDelete: SetNull)
+  scans        QRCodeScan[]
+
+  @@index([vendorId])
+}
+
+model QRCodeScan {
+  id        String   @id @default(cuid())
+  qrCodeId  String
+  shortCode String
+  referrer  String?
+  userAgent String?
+  createdAt DateTime @default(now())
+  qrCode    QRCode   @relation(fields: [qrCodeId], references: [id], onDelete: Cascade)
+
+  @@index([shortCode, createdAt])
+}
+
+model Notification {
+  id          String              @id @default(cuid())
+  recipientId String?
+  vendorId    String?
+  channel     NotificationChannel
+  templateKey String
+  status      NotificationStatus  @default(QUEUED)
+  subject     String?
+  body        String
+  metadata    Json?
+  sentAt      DateTime?
+  readAt      DateTime?
+  createdAt   DateTime            @default(now())
+  recipient   User?               @relation(fields: [recipientId], references: [id], onDelete: SetNull)
+  vendor      Vendor?             @relation(fields: [vendorId], references: [id], onDelete: Cascade)
+
+  @@index([channel, status])
+}
+
+model AuditLog {
+  id         String   @id @default(cuid())
+  actorId    String?
+  actorRole  UserRole?
+  vendorId   String?
+  action     String
+  entityType String
+  entityId   String
+  before     Json?
+  after      Json?
+  metadata   Json?
+  ipAddress  String?
+  userAgent  String?
+  createdAt  DateTime @default(now())
+  actor      User?    @relation(fields: [actorId], references: [id], onDelete: SetNull)
+  vendor     Vendor?  @relation(fields: [vendorId], references: [id], onDelete: SetNull)
+
+  @@index([entityType, entityId])
+  @@index([actorId])
+}
+
+model PlatformEvent {
+  id         String   @id @default(cuid())
+  type       String
+  vendorId   String?
+  orderId    String?
+  entityType String?
+  entityId   String?
+  payload    Json?
+  createdAt  DateTime @default(now())
+  vendor     Vendor?  @relation(fields: [vendorId], references: [id], onDelete: SetNull)
+  order      Order?   @relation(fields: [orderId], references: [id], onDelete: SetNull)
+
+  @@index([type, createdAt])
+  @@index([vendorId])
+  @@index([orderId])
+}
